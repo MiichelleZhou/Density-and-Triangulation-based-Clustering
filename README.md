@@ -24,6 +24,9 @@ clusters_df = alg.tri_dbscan()
 - Create initial clusters based on the kernel density estimation of the data before using triangulation-based DBSCAN. It aims at solving the various density problem in complex data.
 - If the density of the data is uniformly distributed, this option can be set to False to improve efficiency.
 
+**min_sample**: int > 1, defult = 12
+- The number of points in the smallest cluster
+
 **local_std**: float, default = 2.5
 - The standard deviation used as threshold to locally remove outlying triangles.
 
