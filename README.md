@@ -5,6 +5,7 @@ This repository is the official implementation of the Density and Triangulation-
 ## DTC data experiment notebook:
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-u9kJkxvodytEU4nta3stBDyj3BR-Cvi?usp=sharing)
+
 Please include the **dtc.py**, **Aggregation.txt**, **compound.txt**, and **jain.txt** files in to the directory when running this notebook.
 ## Usage
 ```python
