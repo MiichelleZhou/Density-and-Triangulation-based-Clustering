@@ -1,6 +1,9 @@
 # Density and Triangulation-based Clustering (DTC)
 
-This repository is the official implementation of the Density and Triangulation-based Clustering algorithm from the paper "Triangulation based Spatial Clustering for Adjacent Data with Various Density". This algorithm aims at solving clustering difficulties faced by complex data with irregular shapes, various densities, and adjacent connections between multiple clusters.
+This repository is the official implementation of the Density and Triangulation-based Clustering algorithm from the paper "Triangulation-based Spatial Clustering for Adjacent
+Data with Heterogeneous Density". This algorithm aims at solving clustering difficulties faced by complex data with irregular shapes, various densities, and adjacent connections between multiple clusters.
+
+Please review our newly submited paper [here](DTC.pdf).
 
 ## DTC data experiment notebook:
 
