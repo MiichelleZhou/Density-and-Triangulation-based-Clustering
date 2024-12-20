@@ -18,6 +18,8 @@ import folium
 from folium.plugins import FloatImage
 import matplotlib.colors as colors
 import matplotlib.cm as cm
+# from usearch.index import Index, search, MetricKind
+
 class triangulation_dbscan:
 
   '''
@@ -28,7 +30,7 @@ class triangulation_dbscan:
       @param: progress
   '''
 
-  def __init__(self, data, minPts = 5, kde = False, min_sample = 12, local_std = 2.5, figsize = (8,8),  progress = False):
+  def __init__(self, data, minPts = 5, kde = False, min_sample = 12, local_std = 2.5, figsize = (8,8), progress = False, density=False):
       self.data = data
       self.kde = kde
       self.minPts = minPts
@@ -36,7 +38,7 @@ class triangulation_dbscan:
       self.local_std = local_std
       self.figsize = figsize
       self.progress = progress
-
+      self.density = density
 
   # HELP FUNCTION
   def find_neighbors(self, pindex, triang):
@@ -52,6 +54,7 @@ class triangulation_dbscan:
             neighbors.extend([simplex[i] for i in range(len(simplex)) if simplex[i] != pindex])
     return list(set(neighbors)), len(set(neighbors))
 
+
   # HELP FUNCTION
   def find_closest_neighbor(self, data, idx1, idx_neighbors, chosen):
     '''
@@ -63,16 +66,13 @@ class triangulation_dbscan:
         @param: chosen - the indices of the points that are already in a cluster, so it shouldn't be assigned again
     '''
     point1 = data.loc[idx1, ['x', 'y']]
-    min_distance = float('inf')
-    closest_index = None
-    for idx2 in idx_neighbors:
-      if idx2 not in chosen:
-          point2 = data.loc[idx2, ['x', 'y']]
-          distance = np.sqrt(np.sum((point1 - point2)**2))
-          if distance < min_distance:
-              min_distance = distance
-              closest_index = idx2
-    return closest_index, min_distance
+    idx_neighbors = [idx for idx in idx_neighbors if idx not in chosen]
+    if not idx_neighbors:
+      return None, float('inf')
+    neighbor_vectors = data.iloc[idx_neighbors][['x', 'y']]
+    distances = np.linalg.norm(neighbor_vectors - point1, axis=1)
+    min_idx = np.argmin(distances)
+    return idx_neighbors[min_idx], distances[min_idx]
 
 
   # HELP FUNCTION
@@ -188,6 +188,8 @@ class triangulation_dbscan:
 
     while finished == False:
       X = data[['x','y']].to_numpy()
+      if len(X) < 3:
+        return initial_clusters
       points = X
       tri = Delaunay(points)
 
@@ -244,19 +246,21 @@ class triangulation_dbscan:
   ## MAIN ALGORITHM FUNCTION
   def tri_dbscan(self):
     if self.kde == True:
+      
       df = self.data
       df.reset_index(inplace=True, drop=False)
-      tri_est = gaussian_kde(df.T).evaluate(df.T)
-      tri_est = tri_est.reshape(-1, 1)
-      pd.DataFrame(tri_est).to_csv('density.csv', index=False, header=False)
-
-      density = pd.read_csv("density.csv",names=['density'],header=None)
+      density = self.density
+      if density is False:
+        tri_est = gaussian_kde(df.T).evaluate(df.T)
+        tri_est = tri_est.reshape(-1, 1)
+        pd.DataFrame(tri_est).to_csv('density.csv', index=False, header=False)
+        density = pd.read_csv("density.csv",names=['density'],header=None)
       df.loc[:, 'density'] = density
-
       initial_clusters = self.kde_clustering(df)
       colors = ['green', 'red', 'blue', 'yellow', 'black', 'purple', 'cyan', 'magenta', 'orange', 'brown']
 
       print("Start clustering within each initial cluster based on Triangulation")
+      
       final_df = pd.DataFrame(columns=['x', 'y', 'index', 'est_clust'])
       for idx, cluster in enumerate(initial_clusters):
         clustered_points = self.data.iloc[cluster]
@@ -295,15 +299,14 @@ class triangulation_dbscan:
                     continue
             # increment cluster number
             C += 1
-
         clusters_df = pd.DataFrame(clusters, columns =['index', 'est_clust'])
-        joined_df = df.join(clusters_df.set_index('index'), how='left', on=df.index)
+        # joined_df = df.join(clusters_df.set_index('index'), how='left', on=df.index)
+        joined_df = pd.merge(df, clusters_df, left_index=True, right_on='index', how='left')
+        joined_df = joined_df.reset_index(drop=True)
         clusters_df = joined_df[['x','y','index','est_clust']]
-
         ### KNN
         X_train = np.array(clusters_df[['x','y']][clusters_df['est_clust']!=0])
         y_train = np.array(clusters_df['est_clust'][clusters_df['est_clust']!=0])
-        np.array(clusters_df[['x','y']][clusters_df['est_clust']==0])
         predict_x = np.array(clusters_df[['x','y']][clusters_df['est_clust']==0])
 
         if len(predict_x) != 0:
@@ -338,18 +341,54 @@ class triangulation_dbscan:
 
         # Update the labels in clusters_df based on the mapping
         clusters_df['est_clust'] = clusters_df['est_clust'].map(cluster_mapping)
-        final_df = final_df.append(clusters_df)
+        # final_df = final_df.append(clusters_df)
+        final_df = pd.concat([final_df, clusters_df], ignore_index=True)
+
 
       final_df.reset_index(inplace=True, drop=True)
+      # clus_num = final_df['est_clust'].unique()
+      # print('clus_num: ',clus_num)
+      # colors = distinctipy.get_colors(len(clus_num))
+      # color_map = {clus: color for clus, color in zip(clus_num, colors)}
+
+      # for i in range(len(final_df.est_clust)):
+      #   idx = final_df['index'][i]
+      #   cluster = final_df.est_clust[i]
+      #   color = color_map[cluster]
+      #   plt.plot(self.data.iloc[idx]["x"], self.data.iloc[idx]["y"], 'o', c=color)
+      
+      ### KNN
+      # X_train = np.array(final_df[['x','y']][final_df['est_clust']!=0])
+      # y_train = np.array(final_df['est_clust'][final_df['est_clust']!=0])
+      # predict_x = np.array(final_df[['x','y']][final_df['est_clust']==0])
+
+      # if len(predict_x) != 0:
+      #   knn = KNeighborsClassifier(n_neighbors=1)
+      #   knn.fit(X_train, y_train)
+      #   knn_result = knn.predict(predict_x)
+      #   final_df.loc[final_df['est_clust'] == 0, 'est_clust'] = knn_result
+      #   final_df = final_df[['x','y', 'index','est_clust']]
+      ######
+
       clus_num = final_df['est_clust'].unique()
+      print('clus_num:', clus_num)
+
       colors = distinctipy.get_colors(len(clus_num))
       color_map = {clus: color for clus, color in zip(clus_num, colors)}
 
-      for i in range(len(final_df.est_clust)):
-        idx = final_df['index'][i]
-        cluster = final_df.est_clust[i]
-        color = color_map[cluster]
-        plt.plot(self.data.iloc[idx]["x"], self.data.iloc[idx]["y"], 'o', c=color)
+      # Plot the points using only the data from final_df
+      for i in range(len(final_df)):
+          cluster = final_df.iloc[i]['est_clust']
+          x = final_df.iloc[i]['x'] 
+          y = final_df.iloc[i]['y']
+
+          if cluster not in color_map:
+              print(f"Cluster {cluster} not found in color_map.")
+              continue  
+          color = color_map[cluster]
+          # Plot the point with the corresponding cluster color
+          plt.plot(x, y, 'o', c=color)
+      
       return final_df
 
 
@@ -368,6 +407,7 @@ class triangulation_dbscan:
       while (len(unvisited) != 0):
           # choose a random unvisited point
           current_stack.add(random.choice(unvisited))
+          
           while len(current_stack) != 0:
               curr_idx = current_stack.pop()
               # check if point is in a cluster or is a noise
