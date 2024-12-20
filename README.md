@@ -7,9 +7,14 @@ Please review our newly submited paper [here](DTC.pdf).
 
 ## DTC data experiment notebook:
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-u9kJkxvodytEU4nta3stBDyj3BR-Cvi?usp=sharing)
+Environment: Python 3.10.12
 
 Please include the **dtc.py**, **Aggregation.txt**, **compound.txt**, and **jain.txt** files in to the directory when running this notebook.
+
+**Synthetic Data Experiment** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1yiXxURRXJOt71G5CtttHqA-oUfRVYmR_?usp=sharing)
+
+**Real Data Experiment:** [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1-u9kJkxvodytEU4nta3stBDyj3BR-Cvi?usp=sharing)
+
 ## Usage
 ```python
 alg = triangulation_dbscan(data[['x','y']], kde = True)
